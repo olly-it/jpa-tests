@@ -7,12 +7,15 @@
   <style>
     body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
     h1 { font-size: 1.5rem; }
-    form { margin: 1rem 0; display: flex; gap: .5rem; }
+    form { margin: 1.5rem 0; display: flex; gap: .5rem; }
     input { flex: 1; padding: .5rem; }
     button { padding: .5rem 1rem; }
+    #list { margin-top: .75rem; }
     ul { list-style: none; padding: 0; }
     li { padding: .4rem 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: .5rem; }
     small { color: #666; }
+    .swatch { width: 16px; height: 16px; display: inline-block; border: 1px solid #ccc; border-radius: 3px; }
+    .swatch-empty { background: repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px); }
   </style>
 </head>
 <body>
@@ -20,6 +23,7 @@
 
   <form id="createForm">
     <input id="text" type="text" placeholder="Scrivi una nota" required />
+    <input id="color" type="color" value="#000000" title="Colore (opzionale)" />
     <button type="submit">Aggiungi</button>
   </form>
 
@@ -29,6 +33,7 @@
     const listEl = document.getElementById('list');
     const formEl = document.getElementById('createForm');
     const inputEl = document.getElementById('text');
+    const colorEl = document.getElementById('color');
 
     async function load() {
       const res = await fetch('/api/notes');
@@ -39,6 +44,10 @@
         const span = document.createElement('span');
         span.textContent = n.text;
         const small = document.createElement('small');
+        const colorSwatch = document.createElement('span');
+        colorSwatch.className = 'swatch' + (n.noteColor?.color ? '' : ' swatch-empty');
+        if (n.noteColor?.color) colorSwatch.style.background = n.noteColor.color;
+        colorSwatch.title = n.noteColor?.color ? n.noteColor.color : 'Colore non impostato';
         small.textContent = `#${n.id} · ${n.createdAt}`;
         const del = document.createElement('button');
         del.textContent = 'Elimina';
@@ -46,9 +55,25 @@
           await fetch(`/api/notes/${n.id}`, { method: 'DELETE' });
           await load();
         };
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = n.noteColor?.color || '#000000';
+        const setColorBtn = document.createElement('button');
+        setColorBtn.textContent = 'Imposta colore';
+        setColorBtn.onclick = async () => {
+          await fetch(`/api/notes/${n.id}/color`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ color: colorInput.value })
+          });
+          await load();
+        };
         li.appendChild(span);
+        li.appendChild(colorSwatch);
         li.appendChild(small);
         li.appendChild(del);
+        li.appendChild(colorInput);
+        li.appendChild(setColorBtn);
         listEl.appendChild(li);
       }
     }
@@ -57,12 +82,16 @@
       e.preventDefault();
       const text = inputEl.value.trim();
       if (!text) return;
+      const payload = { text };
+      const clr = colorEl.value;
+      if (clr && clr !== '#000000') payload.color = clr;
       await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify(payload)
       });
       inputEl.value = '';
+      colorEl.value = '#000000';
       await load();
     };
 

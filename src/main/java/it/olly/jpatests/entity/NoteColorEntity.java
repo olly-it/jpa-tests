@@ -8,33 +8,25 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "note")
+@Table(name = "note_color")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class NoteEntity {
+public class NoteColorEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String text;
+    private String color;
 
     @Column(nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
-    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinColumn(name = "color_id")
-    private NoteColorEntity noteColor;
+    private OffsetDateTime assignedAt = OffsetDateTime.now();
 }
