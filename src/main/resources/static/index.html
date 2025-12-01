@@ -58,7 +58,66 @@
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = n.noteColor?.color || '#000000';
+        colorInput.style.opacity = '0';
+        colorInput.style.width = '0';
+        colorInput.style.height = '0';
+        const colorBtn = document.createElement('button');
+        colorBtn.type = 'button';
+        colorBtn.textContent = '---';
+        if (n.noteColor?.color) {
+          colorBtn.style.background = n.noteColor.color;
+          colorBtn.style.color = '#fff';
+        } else {
+          colorBtn.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)';
+        }
+        colorBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof colorInput.showPicker === 'function') {
+            colorInput.showPicker();
+          } else {
+            const prev = {
+              opacity: colorInput.style.opacity,
+              width: colorInput.style.width,
+              height: colorInput.style.height,
+              position: colorInput.style.position,
+              left: colorInput.style.left,
+              top: colorInput.style.top,
+              zIndex: colorInput.style.zIndex,
+            };
+            colorInput.style.opacity = '1';
+            colorInput.style.width = '1px';
+            colorInput.style.height = '1px';
+            colorInput.style.position = 'fixed';
+            colorInput.style.left = '50%';
+            colorInput.style.top = '50%';
+            colorInput.style.zIndex = '9999';
+            colorInput.click();
+            const restore = () => {
+              colorInput.style.opacity = prev.opacity;
+              colorInput.style.width = prev.width;
+              colorInput.style.height = prev.height;
+              colorInput.style.position = prev.position;
+              colorInput.style.left = prev.left;
+              colorInput.style.top = prev.top;
+              colorInput.style.zIndex = prev.zIndex;
+              colorInput.removeEventListener('blur', restore);
+              colorInput.removeEventListener('change', restore);
+            };
+            colorInput.addEventListener('blur', restore);
+            colorInput.addEventListener('change', restore);
+          }
+        };
+        colorInput.addEventListener('input', () => {
+          colorBtn.style.background = colorInput.value;
+          colorBtn.style.color = '#fff';
+        });
+        colorInput.addEventListener('change', () => {
+          colorBtn.style.background = colorInput.value;
+          colorBtn.style.color = '#fff';
+        });
         const setColorBtn = document.createElement('button');
+        setColorBtn.type = 'button';
         setColorBtn.textContent = 'Imposta colore';
         setColorBtn.onclick = async () => {
           await fetch(`/api/notes/${n.id}/color`, {
@@ -72,6 +131,7 @@
         li.appendChild(colorSwatch);
         li.appendChild(small);
         li.appendChild(del);
+        li.appendChild(colorBtn);
         li.appendChild(colorInput);
         li.appendChild(setColorBtn);
         listEl.appendChild(li);
