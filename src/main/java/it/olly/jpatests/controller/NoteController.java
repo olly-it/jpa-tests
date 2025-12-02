@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +30,7 @@ public class NoteController {
 
     @GetMapping
     public List<NoteEntity> all() {
-        return repository.findAll();
+        return repository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     @GetMapping("/{id}")
@@ -56,7 +57,9 @@ public class NoteController {
     public ResponseEntity<NoteEntity> setColor(@PathVariable Long id, @RequestBody ColorRequest req) {
         return repository.findById(id)
                 .map(n -> {
-                    if (n.getNoteColor() == null) {
+                    if (req.color() == null || req.color().isBlank()) {
+                        n.setNoteColor(null);
+                    } else if (n.getNoteColor() == null) {
                         NoteColorEntity color = new NoteColorEntity();
                         color.setColor(req.color());
                         n.setNoteColor(color);

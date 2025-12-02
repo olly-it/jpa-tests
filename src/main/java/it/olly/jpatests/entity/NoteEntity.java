@@ -34,7 +34,7 @@ public class NoteEntity {
     @Column(nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "color_id")
     private NoteColorEntity noteColor;
 }
