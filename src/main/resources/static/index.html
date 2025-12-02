@@ -10,9 +10,8 @@
     form { margin: 1.5rem 0; display: flex; gap: .5rem; }
     input { flex: 1; padding: .5rem; }
     button { padding: .5rem 1rem; }
-    #list { margin-top: .75rem; }
-    ul { list-style: none; padding: 0; }
-    li { padding: .4rem 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: .5rem; }
+    #notes { margin-top: .75rem; width: 100%; border-collapse: collapse; }
+    #notes th, #notes td { border-bottom: 1px solid #eee; padding: .4rem; text-align: left; }
     small { color: #666; }
     .swatch { width: 16px; height: 16px; display: inline-block; border: 1px solid #ccc; border-radius: 3px; }
     .swatch-empty { background: repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px); }
@@ -28,10 +27,22 @@
     <button type="submit">Aggiungi</button>
   </form>
 
-  <ul id="list"></ul>
+  <table id="notes">
+    <thead>
+      <tr>
+        <th>Nota</th>
+        <th></th>
+        <th></th>
+        <th>Elimina</th>
+        <th>Colore</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    const listEl = document.getElementById('list');
+    const notesTable = document.getElementById('notes');
+    const notesBody = notesTable.querySelector('tbody');
     const formEl = document.getElementById('createForm');
     const inputEl = document.getElementById('text');
     const colorEl = document.getElementById('color');
@@ -95,23 +106,37 @@
     async function load() {
       const res = await fetch('/api/notes');
       const notes = await res.json();
-      listEl.innerHTML = '';
+      notesBody.innerHTML = '';
       for (const n of notes) {
-        const li = document.createElement('li');
+        const tr = document.createElement('tr');
+        const tdNota = document.createElement('td');
+        const tdColore = document.createElement('td');
+        const tdInfo = document.createElement('td');
+        const tdElimina = document.createElement('td');
+        const tdSetColore = document.createElement('td');
+
         const span = document.createElement('span');
         span.textContent = n.text;
-        const small = document.createElement('small');
+        tdNota.appendChild(span);
+
         const colorSwatch = document.createElement('span');
         colorSwatch.className = 'swatch' + (n.noteColor?.color ? '' : ' swatch-empty');
         if (n.noteColor?.color) colorSwatch.style.background = n.noteColor.color;
         colorSwatch.title = n.noteColor?.color ? n.noteColor.color : 'Colore non impostato';
+        tdColore.appendChild(colorSwatch);
+
+        const small = document.createElement('small');
         small.textContent = `#${n.id} · ${n.createdAt}`;
+        tdInfo.appendChild(small);
+
         const del = document.createElement('button');
         del.textContent = 'Elimina';
         del.onclick = async () => {
           await fetch(`/api/notes/${n.id}`, { method: 'DELETE' });
           await load();
         };
+        tdElimina.appendChild(del);
+
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = n.noteColor?.color || '#000000';
@@ -184,14 +209,16 @@
           });
           await load();
         };
-        li.appendChild(span);
-        li.appendChild(colorSwatch);
-        li.appendChild(small);
-        li.appendChild(del);
-        li.appendChild(colorBtn);
-        li.appendChild(colorInput);
-        li.appendChild(setColorBtn);
-        listEl.appendChild(li);
+        tdSetColore.appendChild(colorBtn);
+        tdSetColore.appendChild(colorInput);
+        tdSetColore.appendChild(setColorBtn);
+
+        tr.appendChild(tdNota);
+        tr.appendChild(tdColore);
+        tr.appendChild(tdInfo);
+        tr.appendChild(tdElimina);
+        tr.appendChild(tdSetColore);
+        notesBody.appendChild(tr);
       }
     }
 
