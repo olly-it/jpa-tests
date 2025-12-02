@@ -24,6 +24,7 @@
   <form id="createForm">
     <input id="text" type="text" placeholder="Scrivi una nota" required />
     <input id="color" type="color" value="#000000" title="Colore (opzionale)" />
+    <button id="colorBtn" type="button">---</button>
     <button type="submit">Aggiungi</button>
   </form>
 
@@ -34,6 +35,62 @@
     const formEl = document.getElementById('createForm');
     const inputEl = document.getElementById('text');
     const colorEl = document.getElementById('color');
+    const colorBtnMain = document.getElementById('colorBtn');
+    colorEl.style.opacity = '0';
+    colorEl.style.width = '0';
+    colorEl.style.height = '0';
+    if (colorEl.value && colorEl.value !== '#000000') {
+      colorBtnMain.style.background = colorEl.value;
+      colorBtnMain.style.color = '#fff';
+    } else {
+      colorBtnMain.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)';
+    }
+    colorBtnMain.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof colorEl.showPicker === 'function') {
+        colorEl.showPicker();
+      } else {
+        const prev = {
+          opacity: colorEl.style.opacity,
+          width: colorEl.style.width,
+          height: colorEl.style.height,
+          position: colorEl.style.position,
+          left: colorEl.style.left,
+          top: colorEl.style.top,
+          zIndex: colorEl.style.zIndex,
+        };
+        colorEl.style.opacity = '1';
+        colorEl.style.width = '1px';
+        colorEl.style.height = '1px';
+        colorEl.style.position = 'fixed';
+        colorEl.style.left = '50%';
+        colorEl.style.top = '50%';
+        colorEl.style.zIndex = '9999';
+        colorEl.click();
+        const restore = () => {
+          colorEl.style.opacity = prev.opacity;
+          colorEl.style.width = prev.width;
+          colorEl.style.height = prev.height;
+          colorEl.style.position = prev.position;
+          colorEl.style.left = prev.left;
+          colorEl.style.top = prev.top;
+          colorEl.style.zIndex = prev.zIndex;
+          colorEl.removeEventListener('blur', restore);
+          colorEl.removeEventListener('change', restore);
+        };
+        colorEl.addEventListener('blur', restore);
+        colorEl.addEventListener('change', restore);
+      }
+    };
+    colorEl.addEventListener('input', () => {
+      colorBtnMain.style.background = colorEl.value;
+      colorBtnMain.style.color = '#fff';
+    });
+    colorEl.addEventListener('change', () => {
+      colorBtnMain.style.background = colorEl.value;
+      colorBtnMain.style.color = '#fff';
+    });
 
     async function load() {
       const res = await fetch('/api/notes');
@@ -152,6 +209,7 @@
       });
       inputEl.value = '';
       colorEl.value = '#000000';
+      colorBtnMain.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)';
       await load();
     };
 
