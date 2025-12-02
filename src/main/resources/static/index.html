@@ -15,6 +15,11 @@
     small { color: #666; }
     .swatch { width: 16px; height: 16px; display: inline-block; border: 1px solid #ccc; border-radius: 3px; }
     .swatch-empty { background: repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px); }
+    .combo { position: relative; display: inline-block; }
+    .combo-trigger { padding: .3rem .6rem; border: 1px solid #ccc; border-radius: 4px; background: repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px); }
+    .combo-menu { position: absolute; top: 100%; left: 0; margin-top: .25rem; background: #fff; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.08); padding: .4rem; display: none; z-index: 1000; }
+    .combo-items { display: grid; grid-template-columns: repeat(6, 24px); gap: .3rem; }
+    .combo-item { width: 24px; height: 24px; border: 1px solid #ccc; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -22,8 +27,7 @@
 
   <form id="createForm">
     <input id="text" type="text" placeholder="Scrivi una nota" required />
-    <input id="color" type="color" value="#000000" title="Colore (opzionale)" />
-    <button id="colorBtn" type="button">---</button>
+    <div id="color-combo-main" class="combo"></div>
     <button type="submit">Aggiungi</button>
   </form>
 
@@ -45,63 +49,37 @@
     const notesBody = notesTable.querySelector('tbody');
     const formEl = document.getElementById('createForm');
     const inputEl = document.getElementById('text');
-    const colorEl = document.getElementById('color');
-    const colorBtnMain = document.getElementById('colorBtn');
-    colorEl.style.opacity = '0';
-    colorEl.style.width = '0';
-    colorEl.style.height = '0';
-    if (colorEl.value && colorEl.value !== '#000000') {
-      colorBtnMain.style.background = colorEl.value;
-      colorBtnMain.style.color = '#fff';
-    } else {
-      colorBtnMain.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)';
-    }
-    colorBtnMain.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (typeof colorEl.showPicker === 'function') {
-        colorEl.showPicker();
-      } else {
-        const prev = {
-          opacity: colorEl.style.opacity,
-          width: colorEl.style.width,
-          height: colorEl.style.height,
-          position: colorEl.style.position,
-          left: colorEl.style.left,
-          top: colorEl.style.top,
-          zIndex: colorEl.style.zIndex,
-        };
-        colorEl.style.opacity = '1';
-        colorEl.style.width = '1px';
-        colorEl.style.height = '1px';
-        colorEl.style.position = 'fixed';
-        colorEl.style.left = '50%';
-        colorEl.style.top = '50%';
-        colorEl.style.zIndex = '9999';
-        colorEl.click();
-        const restore = () => {
-          colorEl.style.opacity = prev.opacity;
-          colorEl.style.width = prev.width;
-          colorEl.style.height = prev.height;
-          colorEl.style.position = prev.position;
-          colorEl.style.left = prev.left;
-          colorEl.style.top = prev.top;
-          colorEl.style.zIndex = prev.zIndex;
-          colorEl.removeEventListener('blur', restore);
-          colorEl.removeEventListener('change', restore);
-        };
-        colorEl.addEventListener('blur', restore);
-        colorEl.addEventListener('change', restore);
+    let selectedColor = null;
+    const palette = ['','#ff5555','#55ff55','#5555ff','#ffaa00','#aaaaaa'];
+    function createColorCombo(root, initialColor, onChange) {
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'combo-trigger';
+      const menu = document.createElement('div');
+      menu.className = 'combo-menu';
+      const items = document.createElement('div');
+      items.className = 'combo-items';
+      menu.appendChild(items);
+      function setTriggerColor(c) {
+        if (!c) { trigger.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)'; trigger.style.color = '#000'; }
+        else { trigger.style.background = c; trigger.style.color = '#fff'; }
       }
-    };
-    colorEl.addEventListener('input', () => {
-      colorBtnMain.style.background = colorEl.value;
-      colorBtnMain.style.color = '#fff';
-    });
-    colorEl.addEventListener('change', () => {
-      colorBtnMain.style.background = colorEl.value;
-      colorBtnMain.style.color = '#fff';
-    });
+      for (const c of palette) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'combo-item';
+        if (!c) btn.classList.add('swatch-empty'); else btn.style.background = c;
+        btn.onclick = () => { setTriggerColor(c); menu.style.display = 'none'; onChange(c || null); };
+        items.appendChild(btn);
+      }
+      setTriggerColor(initialColor);
+      trigger.onclick = (e) => { e.preventDefault(); e.stopPropagation(); menu.style.display = menu.style.display === 'none' || menu.style.display === '' ? 'block' : 'none'; };
+      document.addEventListener('click', () => { menu.style.display = 'none'; });
+      root.appendChild(trigger);
+      root.appendChild(menu);
+    }
+    const comboMain = document.getElementById('color-combo-main');
+    createColorCombo(comboMain, null, (c) => { selectedColor = c; });
 
     async function load() {
       const res = await fetch('/api/notes');
@@ -137,81 +115,17 @@
         };
         tdElimina.appendChild(del);
 
-        const colorInput = document.createElement('input');
-        colorInput.type = 'color';
-        colorInput.value = n.noteColor?.color || '#000000';
-        colorInput.style.opacity = '0';
-        colorInput.style.width = '0';
-        colorInput.style.height = '0';
-        const colorBtn = document.createElement('button');
-        colorBtn.type = 'button';
-        colorBtn.textContent = '---';
-        if (n.noteColor?.color) {
-          colorBtn.style.background = n.noteColor.color;
-          colorBtn.style.color = '#fff';
-        } else {
-          colorBtn.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)';
-        }
-        colorBtn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (typeof colorInput.showPicker === 'function') {
-            colorInput.showPicker();
-          } else {
-            const prev = {
-              opacity: colorInput.style.opacity,
-              width: colorInput.style.width,
-              height: colorInput.style.height,
-              position: colorInput.style.position,
-              left: colorInput.style.left,
-              top: colorInput.style.top,
-              zIndex: colorInput.style.zIndex,
-            };
-            colorInput.style.opacity = '1';
-            colorInput.style.width = '1px';
-            colorInput.style.height = '1px';
-            colorInput.style.position = 'fixed';
-            colorInput.style.left = '50%';
-            colorInput.style.top = '50%';
-            colorInput.style.zIndex = '9999';
-            colorInput.click();
-            const restore = () => {
-              colorInput.style.opacity = prev.opacity;
-              colorInput.style.width = prev.width;
-              colorInput.style.height = prev.height;
-              colorInput.style.position = prev.position;
-              colorInput.style.left = prev.left;
-              colorInput.style.top = prev.top;
-              colorInput.style.zIndex = prev.zIndex;
-              colorInput.removeEventListener('blur', restore);
-              colorInput.removeEventListener('change', restore);
-            };
-            colorInput.addEventListener('blur', restore);
-            colorInput.addEventListener('change', restore);
-          }
-        };
-        colorInput.addEventListener('input', () => {
-          colorBtn.style.background = colorInput.value;
-          colorBtn.style.color = '#fff';
-        });
-        colorInput.addEventListener('change', () => {
-          colorBtn.style.background = colorInput.value;
-          colorBtn.style.color = '#fff';
-        });
-        const setColorBtn = document.createElement('button');
-        setColorBtn.type = 'button';
-        setColorBtn.textContent = 'Imposta colore';
-        setColorBtn.onclick = async () => {
-          await fetch(`/api/notes/${n.id}/color`, {
+        const combo = document.createElement('div');
+        combo.className = 'combo';
+        tdSetColore.appendChild(combo);
+        function onRowColorChange(val) {
+          fetch(`/api/notes/${n.id}/color`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ color: colorInput.value })
-          });
-          await load();
-        };
-        tdSetColore.appendChild(colorBtn);
-        tdSetColore.appendChild(colorInput);
-        tdSetColore.appendChild(setColorBtn);
+            body: JSON.stringify({ color: val })
+          }).then(() => load());
+        }
+        createColorCombo(combo, n.noteColor?.color || null, onRowColorChange);
 
         tr.appendChild(tdNota);
         tr.appendChild(tdColore);
@@ -227,16 +141,14 @@
       const text = inputEl.value.trim();
       if (!text) return;
       const payload = { text };
-      const clr = colorEl.value;
-      if (clr && clr !== '#000000') payload.color = clr;
+      if (selectedColor) payload.color = selectedColor; else payload.color = null;
       await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       inputEl.value = '';
-      colorEl.value = '#000000';
-      colorBtnMain.style.background = 'repeating-linear-gradient(45deg, #f5f5f5 0, #f5f5f5 6px, #ddd 6px, #ddd 12px)';
+      selectedColor = null;
       await load();
     };
 
